@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="HBLevelView">
+        <attr name="startProgress" format="float|reference" />
+        <attr name="scurrProgress" format="float|reference" />
+        <attr name="endProgress" format="float|reference" />
+        <attr name="progressTextSize" format="reference|dimension" />
+        <attr name="backColor" format="color|reference" />
+        <attr name="foreColor" format="color|reference" />
+        <attr name="textColor" format="color|reference" />
+        <attr name="rectCorn" format="dimension|reference" />
+    </declare-styleable>
+    <declare-styleable name="HProgress">
+        <!--外边框颜色-->
+        <attr name="hProgress_outline_color" format="color" />
+        <!--进度条颜色-->
+        <attr name="hProgress_color" format="color" />
+        <!--圆圈颜色-->
+        <attr name="hProgress_circle_color" format="color" />
+        <!--进度字体颜色-->
+        <attr name="hProgress_text_color" format="color" />
+        <!--进度背景颜色-->
+        <attr name="hProgress_text_bg_color" format="color" />
+        <!--圆圈高度-->
+        <attr name="hProgress_circle_height" format="dimension" />
+        <!--progress高度-->
+        <attr name="hProgress_height" format="dimension" />
+        <!--progress进度条高度-->
+        <attr name="hProgress_bar_height" format="dimension" />
+        <!--进度文字高度-->
+        <attr name="hProgress_text_height" format="dimension" />
+        <!--进度文字字体大小-->
+        <attr name="hProgress_text_size" format="dimension" />
+        <!--进度文字横向padding-->
+        <attr name="hProgress_text_paddingH" format="dimension" />
+        <!--进度文字纵向padding-->
+        <attr name="hProgress_text_paddingV" format="dimension" />
+        <!--进度值-->
+        <attr name="hProgress_progress_bar" format="integer" />
+        <attr name="hProgress_maxProgress" format="integer" />
+    </declare-styleable>
+
+
+    <declare-styleable name="Battery">
+        <attr name="batteryOrientation">
+            <enum name="horizontal" value="0"/>
+            <enum name="vertical" value="1"/>
+        </attr>
+        <attr name="batteryColor" format="color"/>
+        <attr name="batteryPower" format="integer"/>
+    </declare-styleable>
+
+</resources>

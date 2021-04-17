@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".UI.MainActivity">
+
+
+    <RelativeLayout
+        android:id="@+id/Headbar"
+        android:layout_width="1280dp"
+        android:layout_height="47dp"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="2dp">
+
+
+        <com.hikivision.UI.BatteryView
+            android:id="@+id/power"
+            android:layout_width="20dp"
+            android:layout_height="45dp" />
+
+        <ImageView
+            android:id="@+id/PCconnect"
+            android:layout_width="45dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_toEndOf="@+id/power"
+            android:src="@drawable/networking" />
+
+        <ImageView
+            android:id="@+id/Dir"
+            android:layout_width="45dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_toEndOf="@+id/PCconnect"
+            android:layout_toRightOf="@id/power"
+            android:src="@drawable/stop" />
+
+        <TextView
+            android:id="@+id/speed"
+            android:layout_width="195dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_toEndOf="@+id/divider2"
+            android:layout_weight="1"
+            android:text="车速:0.0m/s"
+            android:textSize="32dp" />
+
+        <TextView
+            android:id="@+id/Gas"
+            android:layout_width="128dp"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/speed"
+            android:text="瓦斯:0"
+            android:textSize="32dp" />
+
+        <com.hikivision.UI.RobotwarnTextview
+            android:id="@+id/Alter"
+            android:layout_width="162dp"
+            android:layout_height="match_parent"
+            android:layout_toLeftOf="@+id/alarm"
+            android:gravity="center"
+            android:text="运行正常"
+            android:textSize="32dp" />
+
+        <ImageView
+            android:id="@+id/alarm"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_toStartOf="@+id/smoke"
+            android:src="@drawable/alarm" />
+
+        <ImageView
+            android:id="@+id/smoke"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="30dp"
+            android:src="@drawable/smoke" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="160dp"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/divider3"
+            android:gravity="center"
+            android:text="状态:遥控"
+            android:textSize="32dp" />
+
+        <View
+            android:id="@+id/divider"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_alignStart="@+id/speed"
+            android:layout_marginStart="10dp"
+            android:layout_toLeftOf="@id/speed"
+            android:background="?android:attr/listDivider" />
+
+        <View
+            android:id="@+id/divider1"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/speed"
+            android:background="?android:attr/listDivider" />
+
+        <View
+            android:id="@+id/divider2"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_toEndOf="@+id/Dir"
+            android:layout_toRightOf="@id/Dir"
+            android:background="?android:attr/listDivider" />
+
+        <View
+            android:id="@+id/divider3"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="478dp"
+            android:layout_toRightOf="@id/Gas"
+            android:background="?android:attr/listDivider" />
+
+        <View
+            android:id="@+id/divider4"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/status"
+            android:background="?android:attr/listDivider" />
+
+
+    </RelativeLayout>
+
+<FrameLayout
+        android:layout_below="@id/Headbar"
+        android:layout_above="@+id/tailbar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="445dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
+        android:layout_weight="5"
+        android:orientation="horizontal">
+
+
+        <com.hikivision.HIKIVideo.PlaySurfaceview
+            android:id="@+id/surface1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1" />
+
+        <com.hikivision.HIKIVideo.PlaySurfaceview
+            android:id="@+id/surface2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/dirlay"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp">
+
+
+        <Button
+            android:id="@+id/btn_PTZ_left"
+            android:layout_width="65dp"
+            android:layout_height="40dp"
+            android:layout_alignParentLeft="true"
+            android:layout_centerInParent="true"
+            android:text="左转" />
+        <Button
+            android:layout_width="65dp"
+            android:layout_height="40dp"
+            android:id="@+id/btn_PTZ_right"
+            android:layout_alignParentRight="true"
+            android:layout_centerInParent="true"
+            android:text="右转" />
+        <Button
+            android:layout_width="65dp"
+            android:layout_height="40dp"
+            android:layout_alignParentBottom="true"
+            android:layout_centerInParent="true"
+            android:id="@+id/btn_PTZ_down"
+            android:text="下转" />
+        <Button
+            android:layout_width="65dp"
+            android:layout_height="40dp"
+            android:id="@+id/btn_PTZ_up"
+            android:layout_alignParentTop="true"
+            android:layout_centerInParent="true"
+            android:text="上转" />
+
+
+
+    </RelativeLayout>
+
+</FrameLayout>
+    <LinearLayout
+        android:id="@+id/tailbar"
+        android:layout_alignParentBottom="true"
+        android:layout_width="match_parent"
+        android:layout_height="47dp">
+
+        <com.hikivision.UI.RobotProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+</RelativeLayout>
