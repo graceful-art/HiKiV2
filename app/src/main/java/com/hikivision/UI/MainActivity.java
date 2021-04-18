@@ -133,7 +133,6 @@ public class MainActivity extends Activity {
                      * 更新机器人的位置
                      * */
 
-
                     break;
                 case 0x02:
                     /**
@@ -158,6 +157,18 @@ public class MainActivity extends Activity {
             }
         }
     };
+
+    private void SendMessage(final int msg)
+    {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {Message message = new Message();
+                message.what = msg;
+                handler.sendMessage(message);
+            }
+        }).start();
+    }
+
     /**
      * UI逻辑线程
      * */
@@ -169,38 +180,17 @@ public class MainActivity extends Activity {
             while (true)
             {
                 Heart++;//逻辑子线程心跳包
-                if(Heart%1000==0) {//烟雾告警
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {Message message = new Message();
-
-                            message.what = 0x05;
-                            handler.sendMessage(message);
-                        }
-                    }).start();
-                } else if(Heart%1000==500) {//烟雾告警
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Message message = new Message();
-                            message.what = 0x06;
-                            handler.sendMessage(message);
-                        }
-                    }).start();
-                }
-
-                if(Heart%1000==0) {//摄像头重新链接
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Message message = new Message();
-                            message.what = 0x04;
-                            handler.sendMessage(message);
-                        }
-                    }).start();
-                }
-
-                if(Heart%4000==0) {//摄像头重新链接
+                if(Heart%3000==0)
+                {//烟雾告警
+                    SendMessage(0x00);
+                } else if(Heart%3000==500)
+                {//烟雾告警
+                    SendMessage(0x01);
+                } else if(Heart%3000==1000)
+                {
+                    SendMessage(0x02);
+                }else if(Heart%3000==2500)
+                {
                     if (login[0].loginStatus == false) {
                         Thread Hiki = new Thread() {
                             public void run() {
@@ -220,25 +210,10 @@ public class MainActivity extends Activity {
                         Hiki.start();
                     }
                 }
-                if(Heart%2000==0){
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Message message = new Message();
-                            message.what = 0x03;
-                            handler.sendMessage(message);
-                        }
-                    }).start();
-                }
-                //方向按键更新
-                if(ptztimeout>0)
-                    ptztimeout--;
-                if(ptztimeout==0)
-                {
-                    Message message = new Message();
-                    message.what = 0x02;
-                    handler.sendMessage(message);
-                }
+
+                //当减到0的时候说明长时间没有激活事件
+                if(ptztimeout>0) ptztimeout--;
+                else SendMessage(0x03);
 
             }
         }

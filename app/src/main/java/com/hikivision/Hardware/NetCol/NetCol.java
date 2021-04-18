@@ -19,7 +19,6 @@ public class NetCol implements Runnable{
 
     public NetCol(String ip,int port)
     {
-        Log.d(TAG,"TRY TO CONNECT1 ");
         this.severip=ip;
         this.port=port;
     }
