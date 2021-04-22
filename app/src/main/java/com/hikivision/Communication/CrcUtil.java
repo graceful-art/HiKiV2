@@ -12,7 +12,6 @@ package com.hikivision.Communication;
   * (6) 重复第 2 步到第 5 步来处理下一个八位，直到所有的字节处理结束。
   * (7) 最终 CRC 寄存器的值就是 CRC16 的值。
   */
-
 public class CrcUtil {
     /**
      * 一个字节包含位的数量 8
@@ -88,7 +87,6 @@ public class CrcUtil {
     }
     /**
      * 翻转16位的高八位和低八位字节
-     *
      * @param src 翻转数字
      * @return 翻转结果
      */

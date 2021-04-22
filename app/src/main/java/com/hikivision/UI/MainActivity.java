@@ -21,6 +21,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.hikivision.Communication.InfoFlow.InfoFlowtoTcp;
+import com.hikivision.Communication.InfoPacket.InfoPacketSend;
 import com.hikivision.HIKIVideo.Audio;
 import com.hikivision.HIKIVideo.HIKILogin;
 import com.hikivision.HIKIVideo.MethodUtils;
@@ -32,6 +35,9 @@ import com.hikivision.R;
 import com.hikivision.Hardware.Serial.SerialCol;
 import com.hikvision.netsdk.HCNetSDK;
 import com.hikvision.netsdk.PTZCommand;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * @author yueyang
@@ -52,15 +58,14 @@ public class MainActivity extends Activity {
     /**
      * 通讯控制
      * */
-
+    private InfoFlowtoTcp infoFlowtoTcp;
     /**
      * 子线程
      * */
     private Thread    netth;                //网络初始化线程         单次线程
     private Thread    initThread;           //其他硬件初始化线程     单次线程
-    private Thread    warnth;               //警告信息的更新         Thread_warn
     private Thread    logicth;              //循环线程              Thread_logic
-
+    private Thread    infoFlowth;           //循环TCP通信线程        Thread_flow
     /**
      * 窗口上的元素
      */
@@ -90,12 +95,31 @@ public class MainActivity extends Activity {
     Bitmap b_alarm;
     Bitmap b_stop;
     /**
-     * 相关变量
+     * 与触摸屏相关变量
      * */
-    private int Robotwhere=0;                  //当前机器人所出的位置
-    private int ptztimeout=10000;              //PTZ消除所需要的时间
-    private GestureDetector        mDetector1; //手势检测
+    private int ptztimeout=3;                   //PTZ消除所需要的时间 5S左右
+    private GestureDetector        mDetector1;  //手势检测
     private GestureDetector        mDetector2;
+    private void PTZTimerStart()
+    {
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    if(ptztimeout>0) ptztimeout--;
+                    else if(ptztimeout==0) {
+                        SendMessage(0x02);//隐藏掉
+                        ptztimeout--;
+                    }
+                }catch (Exception e) { e.printStackTrace(); }
+            }
+        }, 1000, 1000);//1秒以后启动，每1s发生一次
+    }
+    private void PTZStayShow() {
+        ptzvis.setVisibility(View.VISIBLE);
+        ptztimeout=5;
+    }
+
     private ColorMatrixColorFilter grayColorFilter;
     /**
      * 决定当前那个窗口
@@ -135,18 +159,10 @@ public class MainActivity extends Activity {
 
                     break;
                 case 0x02:
-                    /**
-                     * 摄像头方向按键
-                     * */
                     ptzvis.setVisibility(View.GONE);
                     break;
-                case 0x03:
-                    /**
-                     * 更新其他警告
-                     * */
-                    break;
 
-                case 0x04:
+                case 0x03:
                     /**
                      * 电量
                      * */
@@ -158,7 +174,7 @@ public class MainActivity extends Activity {
         }
     };
 
-    private void SendMessage(final int msg)
+    public void SendMessage(final int msg)
     {
         new Thread(new Runnable() {
             @Override
@@ -179,6 +195,9 @@ public class MainActivity extends Activity {
         {
             while (true)
             {
+                try { Thread.sleep(1);
+                }catch (InterruptedException e){e.printStackTrace();}
+
                 Heart++;//逻辑子线程心跳包
                 if(Heart%3000==0)
                 {//烟雾告警
@@ -188,7 +207,6 @@ public class MainActivity extends Activity {
                     SendMessage(0x01);
                 } else if(Heart%3000==1000)
                 {
-                    SendMessage(0x02);
                 }else if(Heart%3000==2500)
                 {
                     if (login[0].loginStatus == false) {
@@ -210,11 +228,6 @@ public class MainActivity extends Activity {
                         Hiki.start();
                     }
                 }
-
-                //当减到0的时候说明长时间没有激活事件
-                if(ptztimeout>0) ptztimeout--;
-                else SendMessage(0x03);
-
             }
         }
     }
@@ -274,10 +287,13 @@ public class MainActivity extends Activity {
      * 初始化其他硬件，以及硬件线程
      * */
     private void HardInit() {
-        netCol = new NetCol("192.168.43.237", 8081);
+        netCol = new NetCol("10.132.174.141", 8081);
         netth = new Thread(netCol);//prevent connect failed
         netth.start();
+        infoFlowtoTcp=new InfoFlowtoTcp(netCol);
         //serialCol=new SerialCol("/dev/ttySAC2",9600);
+        infoFlowth=new Thread(infoFlowtoTcp,"Thread_flow");
+        infoFlowth.start();
     }
     private void WifiInit(String ssid,String passward)
     {
@@ -288,6 +304,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean ButtonTouchUtil(View view, MotionEvent motionEvent,int dir1,int dir2) {
+        ptztimeout=5;
         HIKILogin log;
         if(isSurface1==true)log=login[0];
         else log=login[1];
@@ -305,7 +322,6 @@ public class MainActivity extends Activity {
                         log.getLoginID(), log.getStartChannel(), dir2, 1)) {
                 }
             }
-            ptztimeout=10000;
             return true;
         }catch (Exception err) {
             Log.e(TAG, "error: " + err.toString());
@@ -319,6 +335,7 @@ public class MainActivity extends Activity {
             double nLenStart=0,nLenEnd=0;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                PTZStayShow();
                 int pCount = event.getPointerCount();// 触摸设备时手指的数量
                 int action = event.getAction();// 获取触屏动作。比如：按下、移动和抬起等手势动作 // 手势按下且屏幕上是两个手指数量时
                 if ((action & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_DOWN
@@ -388,6 +405,7 @@ public class MainActivity extends Activity {
             double nLenStart=0,nLenEnd=0;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                PTZStayShow();
                 int pCount = event.getPointerCount();// 触摸设备时手指的数量
                 int action = event.getAction();// 获取触屏动作。比如：按下、移动和抬起等手势动作 // 手势按下且屏幕上是两个手指数量时
                 if ((action & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_DOWN
@@ -526,16 +544,15 @@ public class MainActivity extends Activity {
         });
         //显示面板设置手势检测器
         SurfaceTouchUtil();
+        PTZTimerStart();
         initThread=new Thread()
         {
             public void run() {
                 HiKiInit(0);//摄像头初始化
                 HiKiInit(1);
                 HardInit();
-                logicth= new Thread(new LogicMain());
+                logicth= new Thread(new LogicMain(),"Thread_logic");
                 logicth.start();
-                warnth=new Thread(robotwarnTextview);
-                warnth.start();
             }
         };
         initThread.start();
@@ -562,13 +579,6 @@ public class MainActivity extends Activity {
                 surface1.setVisibility(View.GONE);
             }
             return super.onDoubleTap(e);
-        }
-
-        @Override
-        public boolean onSingleTapUp(MotionEvent e) {
-            ptzvis.setVisibility(View.VISIBLE);
-            ptztimeout=10000;
-            return super.onSingleTapUp(e);
         }
     }
 }
