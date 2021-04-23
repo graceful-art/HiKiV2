@@ -3,6 +3,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.net.wifi.WifiConfiguration;
@@ -23,6 +24,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.hikivision.Communication.InfoFlow.InfoFlowtoTcp;
+import com.hikivision.Communication.InfoPacket.InfoPacketReceive;
 import com.hikivision.Communication.InfoPacket.InfoPacketSend;
 import com.hikivision.HIKIVideo.Audio;
 import com.hikivision.HIKIVideo.HIKILogin;
@@ -63,6 +65,7 @@ public class MainActivity extends Activity {
      * 子线程
      * */
     private Thread    netth;                //网络初始化线程         单次线程
+    private Thread    serialth;             //串口初始换线程
     private Thread    initThread;           //其他硬件初始化线程     单次线程
     private Thread    logicth;              //循环线程              Thread_logic
     private Thread    infoFlowth;           //循环TCP通信线程        Thread_flow
@@ -140,23 +143,60 @@ public class MainActivity extends Activity {
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             switch (msg.what){
-                case 0x00://更新UI
+                case 0x00://更新顶部UI
                     /**
-                     * 更新字符显示
+                     * 更新连接图标
                      * */
-
-                    /**
-                     * 更新警告按键
-                     * */
+                    if(robotwarnTextview.haveTcpWarn()==true)  pcconncet.setColorFilter(grayColorFilter);
+                    else pcconncet.clearColorFilter();
                     /**
                      * 更新方向图标
                      * */
+                    if(infoFlowtoTcp.infoPacketReceive.robot_status== InfoPacketReceive.ROBOT_STATUS.RIGHT_MOVING){
+                        dir.setImageBitmap(b_dir);
+                        dir.setRotation(0);
+                    }else if(infoFlowtoTcp.infoPacketReceive.robot_status== InfoPacketReceive.ROBOT_STATUS.LEFT_MOVING)
+                    {
+                        dir.setImageBitmap(b_dir);
+                        dir.setRotation(180);
+                    }else {
+                        dir.setImageBitmap(b_stop);
+                        dir.setRotation(0);
+                    }
+                    /**
+                     * 更新瓦斯警告图标
+                     * */
+                    if(robotwarnTextview.haveGasWarn()==true)alarm.clearColorFilter();
+                    else alarm.setColorFilter(grayColorFilter);
+                    /**
+                     * 更新烟雾图标
+                     * */
+                    if(robotwarnTextview.haveSmokeWarn()==true) Smoke.clearColorFilter();
+                    else Smoke.setColorFilter(grayColorFilter);
+                    /**
+                     * 更新车速
+                     * */
+                    String carspeed="车速:"+ infoFlowtoTcp.infoPacketReceive.getSpeed()+"m/s";
+                    speed.setText(carspeed);
+                    /**
+                     * 更新瓦斯浓度
+                     * */
+                    String gasstr="瓦斯:"+ infoFlowtoTcp.infoPacketReceive.getGas_thinkness();
+                    gas.setText(gasstr);
+                    /**
+                     * 更新当前状态
+                     * */
+
+
                     break;
                 case 0x01:
                     /**
                      * 更新机器人的位置
                      * */
-
+                    int location= infoFlowtoTcp.infoPacketReceive.getLocation();
+                    if(location==0||location==50)progressBar.setCenterColor(Color.RED);
+                    else progressBar.setCenterColor(Color.GREEN);
+                    progressBar.setProgress(location);
                     break;
                 case 0x02:
                     ptzvis.setVisibility(View.GONE);
@@ -197,15 +237,14 @@ public class MainActivity extends Activity {
             {
                 try { Thread.sleep(1);
                 }catch (InterruptedException e){e.printStackTrace();}
-
                 Heart++;//逻辑子线程心跳包
-                if(Heart%3000==0)
-                {//烟雾告警
+                if(Heart%300==0)
+                {//更新顶部UI
                     SendMessage(0x00);
-                } else if(Heart%3000==500)
-                {//烟雾告警
+                } else if(Heart%300==100)
+                {//更新位置
                     SendMessage(0x01);
-                } else if(Heart%3000==1000)
+                } else if(Heart%300==200)
                 {
                 }else if(Heart%3000==2500)
                 {
@@ -290,8 +329,12 @@ public class MainActivity extends Activity {
         netCol = new NetCol("10.132.174.141", 8081);
         netth = new Thread(netCol);//prevent connect failed
         netth.start();
+
+        serialCol=new SerialCol("/dev/ttySAC2",115200);
+        serialth=new Thread(serialCol);
+        serialth.start();
+
         infoFlowtoTcp=new InfoFlowtoTcp(netCol);
-        //serialCol=new SerialCol("/dev/ttySAC2",9600);
         infoFlowth=new Thread(infoFlowtoTcp,"Thread_flow");
         infoFlowth.start();
     }

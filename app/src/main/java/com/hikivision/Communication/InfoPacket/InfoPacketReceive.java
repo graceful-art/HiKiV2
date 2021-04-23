@@ -26,19 +26,28 @@ import java.util.Map;
  * 	    0x38	0xEB	50字节电池电量、电压、温度等	3字节TIME 2字节CRC 	    回复电源状态，详见附表3
  * 	    0x06	0xB1				                3字节TIME 2字节CRC      声光报警器警告解除
  * 	    0x06	0xB2				                3字节TIME 2字节CRC      电机警告解除
- *  	0x03	0x82				                          2字节CRC D2 B7     电源告警（电压、电流异常、温度异常）
+ *  	0x04	0x82				                          2字节CRC D2 B7     电源告警（电压、电流异常、温度异常）
  * 	    0x04	0x83				                          2字节CRC 13 77     姿态告警
- * 	    0x04	0x84				                          2字节CRC      距离告警
- *  	0x04	0x85				                          2字节CRC      F4转发工控机告警信息
- * 	    0x04	0x86				                          2字节CRC      F4-PC TCP失联
- * 	    0x04	0x88				                          2字节CRC      电机告警
- * 	    0x04	0x89				                          2字节CRC      F4 发烟雾告警
- * 	    0x04	0x8A				                          2字节CRC      F4 发瓦斯告警
- * 	    0x04	0x95				                          2字节CRC      编码器数据误差较大
+ * 	    0x04	0x84				                          2字节CRC 52 B5     距离告警
+ *  	0x04	0x85				                          2字节CRC 93 75     F4转发工控机告警信息
+ * 	    0x04	0x86				                          2字节CRC D3 74     F4-PC TCP失联
+ * 	    0x04	0x88				                          2字节CRC 52 B0     电机告警
+ * 	    0x04	0x89				                          2字节CRC 93 70     F4 发烟雾告警
+ * 	    0x04	0x8A				                          2字节CRC D3 71    F4 发瓦斯告警
+ * 	    0x04	0x95				                          2字节CRC 92 B9     编码器数据误差较大
+ * */
+/**
+ * 测试用例（向左调速）4a 07 c1 08 00 00 00 ce c2 0d 0a
+ *        （向右调速）4a 07 c2 08 00 00 00 8a c2 0d 0a
+ *         (停止)    4a 06 c3 00 00 00 ba 35 0d 0a
+ *        （急停）   4a 06 c4 00 00 00 bb 41 0d 0a
+ * */
+
+/**
+ * 测试用例（心跳包）：4a 16 e1 00 01 00 01 00 00 02 02 02 02 02 02 02 00 00 00 F6 B0 0d 0a
  * */
 /**
  *  ANSWER_ONE_SECOND一秒额心跳包
- *
  * 数组下标(字节)	含义	                计算方法
  * 0	            温湿度传感器湿度值	    [0]
  * 1～2	            温湿度传感器温度值	    [1] *256 +[2]
@@ -80,6 +89,67 @@ import java.util.Map;
  * ……
  * 48～49	            15#电芯电压	                [48] *256 +[49]	    1mV
  * */
+ class SpotSituationInfo{ //16字节现场数据 必须一秒更新一次
+    public byte[] spotPacket;
+    //在UI中需要更新使用到的一些变量
+    public int speed;
+    public int gas_thinkness;
+    public int location;
+
+
+    //现场状态数据包解码函数
+    private void decode()
+    {
+        if(spotPacket!=null)
+        {
+            speed=(int)spotPacket[7];
+            location=(int)(spotPacket[5])*256+(int)spotPacket[6];
+            gas_thinkness=(int)(spotPacket[3])*256+(int)spotPacket[4];
+        }
+    }
+    //通过接受的数据包更新现场状态信息
+    public void reFresh(byte[] spotPacket)
+    {
+        this.spotPacket=spotPacket;
+        decode();
+    }
+    public SpotSituationInfo(byte[] spotPacket)
+    {
+        this.spotPacket=spotPacket;
+        decode();
+    }
+    public SpotSituationInfo(){}
+}
+ class GestureInfo{//19字节现场数据
+     public byte[] gesturePacket;
+    public byte[] getGesturePacket() {
+        return gesturePacket;
+    }
+    // TODO: 2021/4/20
+    // 好像这个不需要解码
+    public GestureInfo(byte[] gesturePacket)
+    {
+        this.gesturePacket=gesturePacket;
+    }
+    public GestureInfo(){};
+    public void reFresh(byte[]gesturePacket) { this.gesturePacket=gesturePacket;}
+}
+ class BatteryInfo{//50字节电池数据
+     public byte[] BatteryPacket;
+    public byte[] getBatteryPacket() {
+        return BatteryPacket;
+    }
+    // TODO: 2021/4/20
+    // 好像这个不需要解码
+    public BatteryInfo(byte[] BatteyPacket){
+        this.BatteryPacket=BatteyPacket;
+    }
+    public BatteryInfo(){};
+    public void reFresh(byte[] BatteyPacket){
+        this.BatteryPacket=BatteyPacket;
+    }
+}
+
 public class InfoPacketReceive {
     final String TAG="PACKET_RECEIVE";
     public byte[] getReceivepacket(){return receivepacket;}
@@ -105,71 +175,13 @@ public class InfoPacketReceive {
         BAND_BRAKE,
         POWEROFF,
     }
-    private class SpotSituationInfo{ //16字节现场数据 必须一秒更新一次
-        private byte[] spotPacket;
-        //在UI中需要更新使用到的一些变量
-        private int speed;
-        private int gas_thinkness;
-        private int location;
-        public byte[] getSpotPacket() {
-            return spotPacket;
-        }
-        public int    getSpeed(){return speed;}
-        public int    getLocation(){return location;}
-        public int    getGas_thinkness(){return gas_thinkness;}
 
-        //现场状态数据包解码函数
-        private void decode()
-        {
-            if(spotPacket!=null)
-            {
-                speed=(int)spotPacket[7];
-                location=(int)(spotPacket[5])*256+(int)spotPacket[6];
-                gas_thinkness=(int)(spotPacket[3])*256+(int)spotPacket[4];
-            }
-        }
-        //通过接受的数据包更新现场状态信息
-        public void reFresh(byte[] spotPacket)
-        {
-            this.spotPacket=spotPacket;
-            decode();
-        }
-        public SpotSituationInfo(byte[] spotPacket)
-        {
-            this.spotPacket=spotPacket;
-            decode();
-        }
-        public SpotSituationInfo(){}
-    }
-    private class GestureInfo{//19字节现场数据
-        private byte[] gesturePacket;
-        public byte[] getGesturePacket() {
-            return gesturePacket;
-        }
-        // TODO: 2021/4/20
-        // 好像这个不需要解码
-        public GestureInfo(byte[] gesturePacket)
-        {
-            this.gesturePacket=gesturePacket;
-        }
-        public GestureInfo(){};
-        public void reFresh(byte[]gesturePacket) { this.gesturePacket=gesturePacket;}
-    }
-    private class BatteryInfo{//50字节电池数据
-        private byte[] BatteryPacket;
-        public byte[] getBatteryPacket() {
-            return BatteryPacket;
-        }
-        // TODO: 2021/4/20
-        // 好像这个不需要解码
-        public BatteryInfo(byte[] BatteyPacket){
-            this.BatteryPacket=BatteyPacket;
-        }
-        public BatteryInfo(){};
-        public void reFresh(byte[] BatteyPacket){
-            this.BatteryPacket=BatteyPacket;
-        }
-    }
+    public byte[] getSpotPacket() { return spotsituation.spotPacket; }
+    public float    getSpeed(){return (float) spotsituation.speed/100;}
+    public int    getLocation(){return spotsituation.location/100;}
+    public int    getGas_thinkness(){return spotsituation.gas_thinkness;}
+
+
     public InfoPacketReceive() {}
     public void reFresh(byte[] fromtcp)
     {
@@ -212,6 +224,7 @@ public class InfoPacketReceive {
                     robot_pwm_speed=0;
                     break;
                 case ANSWER_ONE_SECOND_HEART:
+                    Log.d(TAG,"ONEHEART");
                     byte [] spotdata=new byte[16];
                     for (int i=0;i<spotdata.length;i++)
                         spotdata[i]=fromtcp[i+3];

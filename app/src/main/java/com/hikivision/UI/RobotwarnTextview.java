@@ -46,6 +46,24 @@ public class RobotwarnTextview extends AppCompatTextView{
                 RobotWarnMap.put((byte)0x95,robotwarn[8]);
                 TextChangeTimerStart();
         }
+        public static boolean haveWarn(){
+                for(int i=0;i<robotwarn.length;i++){
+                        if(robotwarn[i].times>0)return true;
+                }
+                return false;
+        }
+        public static boolean haveSmokeWarn() {
+                if(robotwarn[6].times>0)return true;
+                else return  false;
+        }
+        public static boolean haveGasWarn() {
+                if(robotwarn[7].times>0)return true;
+                else return  false;
+        }
+        public static boolean haveTcpWarn() {
+                if(robotwarn[4].times>0)return true;
+                else return  false;
+        }
         public static Map<Byte,RobotWarn> RobotWarnMap=new HashMap<Byte,RobotWarn>();
         public static void reFresh(byte info)
         {

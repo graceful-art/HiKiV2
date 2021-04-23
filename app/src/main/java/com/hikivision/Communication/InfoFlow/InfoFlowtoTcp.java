@@ -19,7 +19,7 @@ import java.util.TimerTask;
 public class InfoFlowtoTcp implements Runnable{
     private String TAG="InfoFlowtoTcp";
     private NetCol netCol;
-    public InfoPacketReceive infoPacketReceive;
+    public InfoPacketReceive infoPacketReceive=new InfoPacketReceive();
     //发生断开以后重新连接一次
     private void ResetFlow()
     {
