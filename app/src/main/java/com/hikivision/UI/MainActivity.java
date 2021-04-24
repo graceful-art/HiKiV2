@@ -186,8 +186,6 @@ public class MainActivity extends Activity {
                     /**
                      * 更新当前状态
                      * */
-
-
                     break;
                 case 0x01:
                     /**
@@ -200,6 +198,7 @@ public class MainActivity extends Activity {
                     break;
                 case 0x02:
                     ptzvis.setVisibility(View.GONE);
+
                     break;
 
                 case 0x03:

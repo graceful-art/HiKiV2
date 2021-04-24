@@ -1,7 +1,9 @@
 package com.hikivision.UI;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.widget.TextView;
 
 import androidx.appcompat.widget.AppCompatTextView;
 
@@ -20,7 +22,7 @@ import java.util.TimerTask;
  *  带有警告的源代码
  * @modificationHistory
  */
-public class RobotwarnTextview extends AppCompatTextView{
+public class RobotwarnTextview extends AppCompatTextView {
 
         private static final String TAG="RobotTextView";
         //实现一个可以不需要外部控制，实现自我更新的TEXT控件
