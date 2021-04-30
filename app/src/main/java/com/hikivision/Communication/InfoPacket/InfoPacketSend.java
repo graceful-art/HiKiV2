@@ -50,7 +50,7 @@ public class InfoPacketSend {
             Calendar calendar = Calendar.getInstance();
             sendpacket = new byte[11];
             sendpacket[0] = (byte) 0xA4;
-            sendpacket[1] = 0x06;
+            sendpacket[1] = 0x07;
             sendpacket[2] = send_data_map.get(kind).byteValue();
             sendpacket[3] = (byte)pwm;
             sendpacket[4] = (byte) calendar.getTime().getHours();

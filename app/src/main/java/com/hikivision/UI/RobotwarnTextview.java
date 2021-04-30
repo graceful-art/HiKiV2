@@ -25,6 +25,7 @@ import java.util.TimerTask;
 public class RobotwarnTextview extends AppCompatTextView {
 
         private static final String TAG="RobotTextView";
+        public String showText="运行正常";
         //实现一个可以不需要外部控制，实现自我更新的TEXT控件
         //向外提供refresh函数，使用警告缩索引作为输入值
         class RobotWarn{
@@ -87,12 +88,12 @@ public class RobotwarnTextview extends AppCompatTextView {
                                         }
                                 }
                                 if(times==10){
-                                        setText("运行正常");
+                                        showText="运行正常";
                                         currentIndex=0;
                                 }
                                 else {
                                         String currectString=robotwarn[currentIndex].warnname;
-                                        setText(currectString);
+                                        showText=currectString;
                                 }
                                 try {
                                 }catch (Exception e) { e.printStackTrace(); }
@@ -101,7 +102,7 @@ public class RobotwarnTextview extends AppCompatTextView {
         }
 
         public RobotwarnTextview(Context context) { super(context); }
-        public RobotwarnTextview(Context context,AttributeSet attrs) { super(context); }
+        public RobotwarnTextview(Context context,AttributeSet attrs) { super(context,attrs); }
 
 
 }

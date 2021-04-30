@@ -23,7 +23,9 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.hikivision.Communication.InfoFlow.InfoFlowtoMcu;
 import com.hikivision.Communication.InfoFlow.InfoFlowtoTcp;
+import com.hikivision.Communication.InfoPacket.InfoMcuSend;
 import com.hikivision.Communication.InfoPacket.InfoPacketReceive;
 import com.hikivision.Communication.InfoPacket.InfoPacketSend;
 import com.hikivision.HIKIVideo.Audio;
@@ -38,6 +40,8 @@ import com.hikivision.Hardware.Serial.SerialCol;
 import com.hikvision.netsdk.HCNetSDK;
 import com.hikvision.netsdk.PTZCommand;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -61,6 +65,7 @@ public class MainActivity extends Activity {
      * 通讯控制
      * */
     private InfoFlowtoTcp infoFlowtoTcp;
+    private InfoFlowtoMcu infoFlowtoMcu;
     /**
      * 子线程
      * */
@@ -68,7 +73,8 @@ public class MainActivity extends Activity {
     private Thread    serialth;             //串口初始换线程
     private Thread    initThread;           //其他硬件初始化线程     单次线程
     private Thread    logicth;              //循环线程              Thread_logic
-    private Thread    infoFlowth;           //循环TCP通信线程        Thread_flow
+    private Thread    infoFlowTcpth;        //循环TCP通信线程        Thread_flow
+    private Thread    infoFlowMcuth;        //串口接收数据线程
     /**
      * 窗口上的元素
      */
@@ -183,6 +189,10 @@ public class MainActivity extends Activity {
                      * */
                     String gasstr="瓦斯:"+ infoFlowtoTcp.infoPacketReceive.getGas_thinkness();
                     gas.setText(gasstr);
+                    //更改警告信息
+                    robotwarnTextview.setText(robotwarnTextview.showText);
+                    //更新电池电量
+                    batteryView.setPower(infoFlowtoMcu.infomcureceive.batteryvalue/2);
                     /**
                      * 更新当前状态
                      * */
@@ -198,13 +208,9 @@ public class MainActivity extends Activity {
                     break;
                 case 0x02:
                     ptzvis.setVisibility(View.GONE);
-
                     break;
 
                 case 0x03:
-                    /**
-                     * 电量
-                     * */
                     break;
 
                 default:
@@ -234,38 +240,60 @@ public class MainActivity extends Activity {
         {
             while (true)
             {
-                try { Thread.sleep(1);
+                try { Thread.sleep(100);
                 }catch (InterruptedException e){e.printStackTrace();}
                 Heart++;//逻辑子线程心跳包
-                if(Heart%300==0)
+                if(Heart%10==0)
                 {//更新顶部UI
                     SendMessage(0x00);
-                } else if(Heart%300==100)
+                } else if(Heart%10==1)
                 {//更新位置
                     SendMessage(0x01);
-                } else if(Heart%300==200)
+                } else if(Heart%10==2)
                 {
-                }else if(Heart%3000==2500)
+//                    SendMessage(0x03);
+                } else if(Heart%10==3)
                 {
-                    if (login[0].loginStatus == false) {
-                        Thread Hiki = new Thread() {
-                            public void run() {
-                                Log.d(TAG,"第一个摄像头初始化");
-                                HiKiInit(0);//摄像头初始化
-                            }
-                        };
-                        Hiki.start();
-                    }
-                    if (login[1].loginStatus == false) {
-                        Thread Hiki = new Thread() {
-                            public void run() {
-                                Log.d(TAG,"第二个摄像头初始化");
-                                HiKiInit(1);//摄像头初始化
-                            }
-                        };
-                        Hiki.start();
-                    }
+                    if(netCol.connectstatus==false)
+                        serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.READ_ENV_KEY).getSendpacket());
+                    else
+                        infoFlowtoTcp.sendPacket(new InfoPacketSend(InfoPacketSend.INFO_SEND_KIND.ASK_ONE_SECOND_HEART));
+
+                } else if(Heart%10==4)
+                {
+                    serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.QUERY_KEY).getSendpacket());
+//                    serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.CONCTRL_KEY,
+//                            new HashMap<InfoMcuSend.LED_KIND, InfoMcuSend.LED_STATUS>(){{
+//                                put(InfoMcuSend.LED_KIND.RED_LED, InfoMcuSend.LED_STATUS.SLOW_ON);
+//                                put(InfoMcuSend.LED_KIND.GREEN_LED, InfoMcuSend.LED_STATUS.QUICK_ON);
+//                                put(InfoMcuSend.LED_KIND.YELLO_LED, InfoMcuSend.LED_STATUS.ALL_ON);
+//                                put(InfoMcuSend.LED_KIND.BUZZ, InfoMcuSend.LED_STATUS.OFF);
+//                            }}).getSendpacket());
+                } else if(Heart%50==5)
+                {
+                    infoFlowtoTcp.sendPacket(new InfoPacketSend(InfoPacketSend.INFO_SEND_KIND.ASK_FIVE_SECOND_HEART));
                 }
+//                else if(Heart%100==25)
+//                {
+//                    if (login[0].loginStatus == false) {
+//                        Thread Hiki = new Thread() {
+//                            public void run() {
+//                                Log.d(TAG,"第一个摄像头初始化");
+//                                HiKiInit(0);//摄像头初始化
+//                            }
+//                        };
+//                        Hiki.start();
+//                    }
+//                    if (login[1].loginStatus == false) {
+//                        Thread Hiki = new Thread() {
+//                            public void run() {
+//                                Log.d(TAG,"第二个摄像头初始化");
+//                                HiKiInit(1);//摄像头初始化
+//                            }
+//                        };
+//                        Hiki.start();
+//                    }
+//                }
             }
         }
     }
@@ -325,7 +353,7 @@ public class MainActivity extends Activity {
      * 初始化其他硬件，以及硬件线程
      * */
     private void HardInit() {
-        netCol = new NetCol("10.132.174.141", 8081);
+        netCol = new NetCol("192.168.2.9", 8081);
         netth = new Thread(netCol);//prevent connect failed
         netth.start();
 
@@ -334,8 +362,12 @@ public class MainActivity extends Activity {
         serialth.start();
 
         infoFlowtoTcp=new InfoFlowtoTcp(netCol);
-        infoFlowth=new Thread(infoFlowtoTcp,"Thread_flow");
-        infoFlowth.start();
+        infoFlowTcpth=new Thread(infoFlowtoTcp,"Thread_Tcp");
+        infoFlowTcpth.start();
+
+        infoFlowtoMcu=new InfoFlowtoMcu(serialCol,netCol);
+        infoFlowMcuth=new Thread(infoFlowtoMcu,"Thread_Mcu");
+        infoFlowMcuth.start();
     }
     private void WifiInit(String ssid,String passward)
     {
@@ -551,7 +583,6 @@ public class MainActivity extends Activity {
         alarm.setImageBitmap(b_alarm);
         dir.setImageBitmap(b_stop);
         pcconncet.setImageBitmap(b_pcconnect);
-
         ColorMatrix cm = new ColorMatrix();
         cm.setSaturation(0); // 设置饱和度
         grayColorFilter = new ColorMatrixColorFilter(cm);
@@ -590,8 +621,8 @@ public class MainActivity extends Activity {
         initThread=new Thread()
         {
             public void run() {
-                HiKiInit(0);//摄像头初始化
-                HiKiInit(1);
+//                HiKiInit(0);//摄像头初始化
+//                HiKiInit(1);
                 HardInit();
                 logicth= new Thread(new LogicMain(),"Thread_logic");
                 logicth.start();

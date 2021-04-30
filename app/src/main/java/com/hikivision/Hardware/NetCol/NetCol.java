@@ -8,6 +8,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class NetCol implements Runnable{
@@ -17,14 +18,17 @@ public class NetCol implements Runnable{
     public int     port;
     public boolean connectstatus=false;
     public Socket  clintsocket;
+    public SocketAddress socketAddress;
     private OutputStream        cio;
     private InputStream         cin;
     private DataInputStream    bin;
+    private final ReentrantLock rLock = new ReentrantLock();
     private List<Byte>   output=new ArrayList<Byte>();
     public NetCol(String ip,int port)
     {
         this.severip=ip;
         this.port=port;
+        socketAddress = new InetSocketAddress(ip,port);
     }
 
     public void send(byte[] writebuf)
@@ -40,11 +44,10 @@ public class NetCol implements Runnable{
         }
     }
 
-    public byte[] read()
-    {
+    public byte[] read() throws EOFException {
         try {
             output.clear();
-            if(connectstatus==true){
+            if(connectstatus==true&&clintsocket!=null&&bin!=null){
             Byte b;
             while (true){
                 b=bin.readByte();
@@ -64,32 +67,54 @@ public class NetCol implements Runnable{
             }
             return bytes;
         }}
+        catch (EOFException e)
+        {
+            rLock.lock();
+            e.printStackTrace();
+            disconnect();
+            rLock.unlock();
+            throw e;
+        }
         catch (Exception e) {
             e.printStackTrace();
         }
         return  null;
     }
 
+    public void disconnect()
+    {
+        if(connectstatus) {
+            try {
+                bin.close();
+                cin.close();
+                cio.close();
+                clintsocket.close();
+                Log.d(TAG, "DISCONNECT");
+                connectstatus=false;
+            } catch (Exception ioe) {
+                ioe.printStackTrace();
+            }
+            finally {
+            }
+        }
+    }
+
     public void run()
     {
         try {
-            if(clintsocket!=null)//如果不是第一次链接先断开链接
-            {
-                clintsocket.close();
-                cio.close();
-                cin.close();
-                bin.close();
-            }
-            clintsocket=new Socket(severip,port);
+//            disconnect();
+//            clintsocket=new Socket(severip,port);
+            clintsocket = new Socket();
+            clintsocket.connect(socketAddress, 1500);
             clintsocket.setReceiveBufferSize(4096);
             clintsocket.setSoLinger(true, 30);
             clintsocket.setTcpNoDelay(true);
             clintsocket.setKeepAlive(true);
-            connectstatus = true;
-            Log.d(TAG, "CONNECT " + clintsocket.getRemoteSocketAddress() + " SUCCESS ");
             cio=clintsocket.getOutputStream();
             cin=clintsocket.getInputStream();
             bin=new DataInputStream(cin);
+            connectstatus = true;
+            Log.d(TAG, "CONNECT " + clintsocket.getRemoteSocketAddress() + " SUCCESS ");
         }catch (IOException e)
         {
             e.printStackTrace();

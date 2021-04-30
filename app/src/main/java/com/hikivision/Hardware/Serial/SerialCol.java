@@ -69,25 +69,27 @@ public class SerialCol implements Runnable{
     {
         try {
             output.clear();
+            if (mSerialPort != null&&bin!=null) {
                 Byte b;
-                while (true){
-                    b=bin.readByte();
-                    if(b==0x0d)break;
+                while (true) {
+                    b = bin.readByte();
+                    if (b == 0x0d) break;
                     else output.add(b);
                 }
-                if(bin.readByte()!=0x0a){
-                    Log.d(TAG,"error");
+                if (bin.readByte() != 0x0a) {
+                    Log.d(TAG, "error");
                     return null;
                 }
                 Iterator<Byte> iterator = output.iterator();
-                int i=0;
-                byte[] bytes=new byte[output.size()];
+                int i = 0;
+                byte[] bytes = new byte[output.size()];
                 while (iterator.hasNext()) {
                     bytes[i] = iterator.next();
                     i++;
                 }
                 return bytes;
             }
+        }
         catch (IOException e) {
             e.printStackTrace();
         }

@@ -5,6 +5,7 @@ import com.hikivision.Communication.InfoPacket.InfoPacketReceive;
 import com.hikivision.Communication.InfoPacket.InfoPacketSend;
 import com.hikivision.Hardware.NetCol.NetCol;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -26,7 +27,7 @@ public class InfoFlowtoTcp implements Runnable{
         Thread netth = new Thread(netCol);//prevent connect failed
         netth.start();
     }
-    public InfoFlowtoTcp(NetCol netCol)
+    public InfoFlowtoTcp(final NetCol netCol)
     {
         this.infoPacketReceive=new InfoPacketReceive();
         this.netCol=netCol;
@@ -39,7 +40,8 @@ public class InfoFlowtoTcp implements Runnable{
                         infoPacketReceive.FlowTimeMinus();
                         if (infoPacketReceive.getFlowResetTime() <= 0) {
                             infoPacketReceive.FlowTimeReset();
-                            ResetFlow();
+                            if(netCol.connectstatus) netCol.clintsocket.shutdownInput();
+                            else ResetFlow();
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -57,10 +59,16 @@ public class InfoFlowtoTcp implements Runnable{
     {
         while (true)
         {
-            byte[] data= netCol.read();
-            if(data!=null) {
-                infoPacketReceive.reFresh(data);
-                Log.d(TAG,infoPacketReceive.robot_status.name());
+            try {
+                byte[] data = netCol.read();
+                if (data != null) {
+                    infoPacketReceive.reFresh(data);
+                    Log.d(TAG, infoPacketReceive.robot_status.name());
+                }
+            }
+            catch (EOFException e)
+            {
+                ResetFlow();
             }
         }
     }

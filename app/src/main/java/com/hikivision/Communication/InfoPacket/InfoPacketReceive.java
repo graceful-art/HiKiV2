@@ -157,7 +157,7 @@ public class InfoPacketReceive {
     public  SpotSituationInfo spotsituation=new SpotSituationInfo();    //现场状况信息
     public  GestureInfo       gestureInfo  =new GestureInfo();          //机器人物理状态信息
     public  BatteryInfo       batteryInfo  =new BatteryInfo();          //机器人电池状况
-    public  ROBOT_STATUS      robot_status=ROBOT_STATUS.POWEROFF;         //机器人状态信息
+    public static ROBOT_STATUS      robot_status=ROBOT_STATUS.POWEROFF;         //机器人状态信息
     public int                robot_pwm_speed;      //当前PWM速度
     private INFO_RECEIVE_KIND info_receive_kind;    //收到的命令类型
     private int FlowResetTime=10;   // 定义一个定时器 200ms就减一
@@ -166,7 +166,7 @@ public class InfoPacketReceive {
     public void FlowTimeReset(){FlowResetTime=10;}//每当接受到ANSWER_ONE_SECOND_HEART调用一次
     public void FlowTimeMinus(){FlowResetTime--;} //每次定时器时间发生一次
     public int getFlowResetTime(){return FlowResetTime;}
-    public final boolean FlowLock=false;//false状态不进行重连
+    public final boolean FlowLock=true;//false状态不进行重连
                                         //true考虑定时重连
     public enum ROBOT_STATUS{
         LEFT_MOVING,

@@ -42,7 +42,7 @@ public class InfoMcuSend {
         if(kind==INFO_MCU_SEND_KIND.CONCTRL_KEY)return;//不支持这种键值
         sendpacket=new byte[4+2];
         sendpacket[0]=0x64;
-        sendpacket[1]=0x03;
+        sendpacket[1]=0x02;
         sendpacket[2]=send_data_map.get(kind);
         sendpacket[3]=getCheck(sendpacket,3);
         sendpacket[4]='\r';
