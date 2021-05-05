@@ -38,10 +38,12 @@ public class InfoFlowtoTcp implements Runnable{
                 public void run() {
                     try {
                         infoPacketReceive.FlowTimeMinus();
-                        if (infoPacketReceive.getFlowResetTime() <= 0) {
-                            infoPacketReceive.FlowTimeReset();
+                        if (infoPacketReceive.getFlowResetTime() == 0) {
                             if(netCol.connectstatus) netCol.clintsocket.shutdownInput();
-                            else ResetFlow();
+                            else {
+                                ResetFlow();
+                                infoPacketReceive.FlowTimeReset();
+                            }
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -69,6 +71,7 @@ public class InfoFlowtoTcp implements Runnable{
             catch (EOFException e)
             {
                 ResetFlow();
+                infoPacketReceive.FlowTimeReset();
             }
         }
     }

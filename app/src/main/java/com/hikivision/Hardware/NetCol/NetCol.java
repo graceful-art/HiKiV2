@@ -22,7 +22,6 @@ public class NetCol implements Runnable{
     private OutputStream        cio;
     private InputStream         cin;
     private DataInputStream    bin;
-    private final ReentrantLock rLock = new ReentrantLock();
     private List<Byte>   output=new ArrayList<Byte>();
     public NetCol(String ip,int port)
     {
@@ -69,10 +68,8 @@ public class NetCol implements Runnable{
         }}
         catch (EOFException e)
         {
-            rLock.lock();
-            e.printStackTrace();
             disconnect();
-            rLock.unlock();
+            e.printStackTrace();
             throw e;
         }
         catch (Exception e) {
@@ -85,16 +82,14 @@ public class NetCol implements Runnable{
     {
         if(connectstatus) {
             try {
+                connectstatus=false;
                 bin.close();
                 cin.close();
                 cio.close();
                 clintsocket.close();
                 Log.d(TAG, "DISCONNECT");
-                connectstatus=false;
             } catch (Exception ioe) {
                 ioe.printStackTrace();
-            }
-            finally {
             }
         }
     }
