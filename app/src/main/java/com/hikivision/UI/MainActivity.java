@@ -15,6 +15,8 @@ import android.os.Message;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -28,6 +30,11 @@ import com.hikivision.Communication.InfoFlow.InfoFlowtoTcp;
 import com.hikivision.Communication.InfoPacket.InfoMcuSend;
 import com.hikivision.Communication.InfoPacket.InfoPacketReceive;
 import com.hikivision.Communication.InfoPacket.InfoPacketSend;
+import com.hikivision.DaHuaVideo.IPLoginModule;
+import com.hikivision.DaHuaVideo.LivePreviewModule;
+import com.hikivision.DaHuaVideo.NetSDKLib;
+import com.hikivision.DaHuaVideo.PTZControl;
+import com.hikivision.DaHuaVideo.TalkModule;
 import com.hikivision.HIKIVideo.Audio;
 import com.hikivision.HIKIVideo.HIKILogin;
 import com.hikivision.HIKIVideo.MethodUtils;
@@ -52,7 +59,7 @@ import java.util.TimerTask;
  *  主活动源代码
  * @modificationHistory
  */
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SurfaceHolder.Callback{
     private final String TAG = "MainActivity";
     private Context context;
     /**
@@ -81,6 +88,8 @@ public class MainActivity extends Activity {
     private RobotwarnTextview  robotwarnTextview=null;
     private PlaySurfaceview    surface1   = null;
     private PlaySurfaceview    surface2   = null;
+    private SurfaceView        surface3   = null;
+    private PlaySurfaceview    surface4   = null;
     private TextView           gas        = null;
     private TextView           speed      = null;
     private TextView           status     = null;
@@ -106,9 +115,11 @@ public class MainActivity extends Activity {
     /**
      * 与触摸屏相关变量
      * */
-    private int ptztimeout=3;                   //PTZ消除所需要的时间 5S左右
+    private int ptztimeout;                   //PTZ消除所需要的时间 5S左右
     private GestureDetector        mDetector1;  //手势检测
     private GestureDetector        mDetector2;
+    private GestureDetector        mDetector3;
+    private GestureDetector        mDetector4;
     private void PTZTimerStart()
     {
         new Timer().schedule(new TimerTask() {
@@ -133,6 +144,7 @@ public class MainActivity extends Activity {
     /**
      * 决定当前那个窗口
      */
+    private boolean showSurface;
     private boolean isSurface1;
     private boolean isSurface2;
     /**
@@ -141,6 +153,14 @@ public class MainActivity extends Activity {
     private  HIKILogin[] login =new HIKILogin[2];//存储登录信息
     private  Videoinfo[] vid   =new Videoinfo[2];//存储摄像头信息
     public static Audio[]audio =new Audio[2];    //存储话筒信息
+
+    /**
+     * 大华摄像头
+     * */
+    private IPLoginModule mLoginModule;
+    private LivePreviewModule mLiveModule;
+    private PTZControl ptzControl;
+    public static TalkModule mTalkModule;
     /**
      * 在线程中进行,UI显示
      * */
@@ -149,12 +169,7 @@ public class MainActivity extends Activity {
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             switch (msg.what){
-                case 0x00://更新顶部UI
-                    /**
-                     * 更新连接图标
-                     * */
-                    if(robotwarnTextview.haveTcpWarn()==true)  pcconncet.setColorFilter(grayColorFilter);
-                    else pcconncet.clearColorFilter();
+                case 0x00:
                     /**
                      * 更新方向图标
                      * */
@@ -169,6 +184,18 @@ public class MainActivity extends Activity {
                         dir.setImageBitmap(b_stop);
                         dir.setRotation(0);
                     }
+                    //更新电池电量
+                    batteryView.setPower(infoFlowtoMcu.infomcureceive.batteryvalue/2);
+                    /**
+                     * 更新当前状态
+                     * */
+                    break;
+                case 0x01:
+                    /**
+                     * 更新连接图标
+                     * */
+                    if(netCol.connectstatus==false)  pcconncet.setColorFilter(grayColorFilter);
+                    else pcconncet.clearColorFilter();
                     /**
                      * 更新瓦斯警告图标
                      * */
@@ -187,24 +214,18 @@ public class MainActivity extends Activity {
                     /**
                      * 更新瓦斯浓度
                      * */
-                    String gasstr="瓦斯:"+ infoFlowtoTcp.infoPacketReceive.getGas_thinkness();
+                    String gasstr="瓦斯:"+ infoFlowtoTcp.infoPacketReceive.getGas_concentration();
                     gas.setText(gasstr);
                     //更改警告信息
                     robotwarnTextview.setText(robotwarnTextview.showText);
-                    //更新电池电量
-                    batteryView.setPower(infoFlowtoMcu.infomcureceive.batteryvalue/2);
-                    /**
-                     * 更新当前状态
-                     * */
-                    break;
-                case 0x01:
                     /**
                      * 更新机器人的位置
                      * */
                     int location= infoFlowtoTcp.infoPacketReceive.getLocation();
-                    if(location==0||location==50)progressBar.setCenterColor(Color.RED);
+                    if(location<=0||location>=progressBar.getmMaxProgress()) progressBar.setCenterColor(Color.RED);
                     else progressBar.setCenterColor(Color.GREEN);
-                    progressBar.setProgress(location);
+                    if(location>=0&&location<=progressBar.getmMaxProgress()) progressBar.setProgress(location);
+                    else if(location<0) progressBar.setProgress(0);
                     break;
                 case 0x02:
                     ptzvis.setVisibility(View.GONE);
@@ -244,56 +265,74 @@ public class MainActivity extends Activity {
                 }catch (InterruptedException e){e.printStackTrace();}
                 Heart++;//逻辑子线程心跳包
                 if(Heart%10==0)
-                {//更新顶部UI
+                {
                     SendMessage(0x00);
                 } else if(Heart%10==1)
-                {//更新位置
-                    SendMessage(0x01);
-                } else if(Heart%10==2)
-                {
-//                    SendMessage(0x03);
-                } else if(Heart%10==3)
                 {
                     if(netCol.connectstatus==false)
                         serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.READ_ENV_KEY).getSendpacket());
                     else
                         infoFlowtoTcp.sendPacket(new InfoPacketSend(InfoPacketSend.INFO_SEND_KIND.ASK_ONE_SECOND_HEART));
 
+                } else if(Heart%10==2)
+                {
+                } else if(Heart%10==3)
+                {
+                    if(robotwarnTextview.haveSmokeWarn()==true) InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.RED_LED,InfoMcuSend.LED_STATUS.QUICK_ON);
+                    else if(robotwarnTextview.haveGasWarn()==true) InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.RED_LED,InfoMcuSend.LED_STATUS.SLOW_ON);
+                    else InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.RED_LED,InfoMcuSend.LED_STATUS.OFF);
+                    if(netCol.connectstatus==false) InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.GREEN_LED, InfoMcuSend.LED_STATUS.SLOW_ON);
+                    else InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.GREEN_LED, InfoMcuSend.LED_STATUS.OFF);
+                    if(robotwarnTextview.haveAttitudeWarn()==true) InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.YELLO_LED, InfoMcuSend.LED_STATUS.QUICK_ON);
+                    else if(robotwarnTextview.haveDistanceWarn()==true) InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.YELLO_LED, InfoMcuSend.LED_STATUS.SLOW_ON);
+                    else InfoMcuSend.ConPan.put(InfoMcuSend.LED_KIND.YELLO_LED, InfoMcuSend.LED_STATUS.OFF);
+                    serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.CONCTRL_KEY,InfoMcuSend.ConPan).getSendpacket());
+
                 } else if(Heart%10==4)
                 {
+                    SendMessage(0x01);
+                } else if(Heart%10==5)
+                {
                     serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.QUERY_KEY).getSendpacket());
-//                    serialCol.send(new InfoMcuSend(InfoMcuSend.INFO_MCU_SEND_KIND.CONCTRL_KEY,
-//                            new HashMap<InfoMcuSend.LED_KIND, InfoMcuSend.LED_STATUS>(){{
-//                                put(InfoMcuSend.LED_KIND.RED_LED, InfoMcuSend.LED_STATUS.SLOW_ON);
-//                                put(InfoMcuSend.LED_KIND.GREEN_LED, InfoMcuSend.LED_STATUS.QUICK_ON);
-//                                put(InfoMcuSend.LED_KIND.YELLO_LED, InfoMcuSend.LED_STATUS.ALL_ON);
-//                                put(InfoMcuSend.LED_KIND.BUZZ, InfoMcuSend.LED_STATUS.OFF);
-//                            }}).getSendpacket());
-                } else if(Heart%50==5)
+
+                } else if(Heart%10==6)
+                {
+
+                }
+                if(Heart%50==6)
                 {
                     infoFlowtoTcp.sendPacket(new InfoPacketSend(InfoPacketSend.INFO_SEND_KIND.ASK_FIVE_SECOND_HEART));
                 }
-//                else if(Heart%100==25)
-//                {
-//                    if (login[0].loginStatus == false) {
-//                        Thread Hiki = new Thread() {
-//                            public void run() {
-//                                Log.d(TAG,"第一个摄像头初始化");
-//                                HiKiInit(0);//摄像头初始化
-//                            }
-//                        };
-//                        Hiki.start();
-//                    }
-//                    if (login[1].loginStatus == false) {
-//                        Thread Hiki = new Thread() {
-//                            public void run() {
-//                                Log.d(TAG,"第二个摄像头初始化");
-//                                HiKiInit(1);//摄像头初始化
-//                            }
-//                        };
-//                        Hiki.start();
-//                    }
-//                }
+                if(Heart%100==2)
+                {
+                    if (login[0].loginStatus == false) {
+                        Thread Hiki = new Thread() {
+                            public void run() {
+                                HiKiInit(0);
+                            }
+                        };
+                        Hiki.start();
+                    }
+                    if (login[1].loginStatus == false) {
+                        Thread Hiki = new Thread() {
+                            public void run() {
+                                HiKiInit(1);
+                                HiKiInit(3);
+                            }
+                        };
+                        Hiki.start();
+                    }
+                    if(IPLoginModule.loginStatus == false){
+                        Thread Hiki = new Thread() {
+                            public void run() {
+                                HiKiInit(2);
+                                try { Thread.sleep(300);
+                                }catch (InterruptedException e){e.printStackTrace();}
+                            }
+                        };
+                        Hiki.start();
+                    }
+                }
             }
         }
     }
@@ -334,26 +373,31 @@ public class MainActivity extends Activity {
      **/
     private void HiKiInit(int index){
         if(index==0) {
-            vid[0] = new Videoinfo("192.168.2.64", 8000, "admin", "iris2020");
-            login[0] = new HIKILogin();
             login[0].CameraLogin(vid[0]);
             surface1.startPreview(login[0].getLoginID(), login[0].getStartChannel());
             surface1.login = login[0];
-            audio[0] = new Audio(login[0]);
-        }else {
-            vid[1] = new Videoinfo("192.168.2.65", 8000, "admin", "root1234");
-            login[1] = new HIKILogin();
+        }
+        else if(index==1){
             login[1].CameraLogin(vid[1]);
             surface2.startPreview(login[1].getLoginID(), login[1].getStartChannel());
             surface2.login = login[1];
-            audio[1] = new Audio(login[1]);
+        }
+        else if(index==2) {
+            mLoginModule.login("192.168.2.65","37777","admin","iris2021");
+            mLiveModule.startPlay(0,0,surface3);
+            mTalkModule = new TalkModule(mLoginModule);
+        }
+        else if(index==3){
+//            login[1].CameraLogin(vid[1]);
+            surface4.startPreview(login[1].getLoginID(), login[1].getStartChannel() + 1);
+            surface4.login = login[1];
         }
     }
     /**
      * 初始化其他硬件，以及硬件线程
      * */
     private void HardInit() {
-        netCol = new NetCol("192.168.2.9", 8081);
+        netCol = new NetCol("192.168.2.42", 8081);
         netth = new Thread(netCol);//prevent connect failed
         netth.start();
 
@@ -409,7 +453,6 @@ public class MainActivity extends Activity {
             double nLenStart=0,nLenEnd=0;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                PTZStayShow();
                 int pCount = event.getPointerCount();// 触摸设备时手指的数量
                 int action = event.getAction();// 获取触屏动作。比如：按下、移动和抬起等手势动作 // 手势按下且屏幕上是两个手指数量时
                 if ((action & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_DOWN
@@ -479,7 +522,6 @@ public class MainActivity extends Activity {
             double nLenStart=0,nLenEnd=0;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                PTZStayShow();
                 int pCount = event.getPointerCount();// 触摸设备时手指的数量
                 int action = event.getAction();// 获取触屏动作。比如：按下、移动和抬起等手势动作 // 手势按下且屏幕上是两个手指数量时
                 if ((action & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_DOWN
@@ -543,6 +585,27 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        //SurfaceView3实现双击与滑动效果
+        surface3.setLongClickable(true);
+        surface3.setOnTouchListener(new View.OnTouchListener() {
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                PTZStayShow();
+                mDetector3.onTouchEvent(event);
+                return true;
+            }
+        });
+        //SurfaceView4实现双击与滑动效果
+        surface4.setLongClickable(true);
+        surface4.setOnTouchListener(new View.OnTouchListener() {
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                mDetector4.onTouchEvent(event);
+                return true;
+            }
+        });
     }
     /**
      * 活动初始化
@@ -553,11 +616,17 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setStyle();
         setContentView(R.layout.activity_main);
+        NetSDKLib.getInstance().init();
         MethodUtils.initHCNetSDK();
         mDetector1 = new GestureDetector(this, new HiGestuewDetector());
         mDetector2 = new GestureDetector(this, new HiGestuewDetector());
+        mDetector3 = new GestureDetector(this, new HiGestuewDetector());
+        mDetector4 = new GestureDetector(this, new HiGestuewDetector());
         surface1         =(PlaySurfaceview)  findViewById(R.id.surface1);
         surface2         =(PlaySurfaceview)  findViewById(R.id.surface2);
+        surface3         =(SurfaceView)      findViewById(R.id.surface3);
+        surface3.getHolder().addCallback(this);
+        surface4         =(PlaySurfaceview)  findViewById(R.id.surface4);
         gas              =(TextView)         findViewById(R.id.Gas);
         speed            =(TextView)         findViewById(R.id.speed);
         status           =(TextView)         findViewById(R.id.status);
@@ -578,6 +647,8 @@ public class MainActivity extends Activity {
         b_dir            =(Bitmap)           BitmapFactory.decodeResource(getResources(), R.drawable.right);
         b_pcconnect      =(Bitmap)           BitmapFactory.decodeResource(getResources(), R.drawable.networking);
         b_stop           =(Bitmap)           BitmapFactory.decodeResource(getResources(), R.drawable.stop);
+        surface1.setVisibility(View.GONE);
+        surface2.setVisibility(View.GONE);
         ptzvis.setVisibility(View.GONE);
         Smoke.setImageBitmap(b_smoke);
         alarm.setImageBitmap(b_alarm);
@@ -586,6 +657,7 @@ public class MainActivity extends Activity {
         ColorMatrix cm = new ColorMatrix();
         cm.setSaturation(0); // 设置饱和度
         grayColorFilter = new ColorMatrixColorFilter(cm);
+        pcconncet.setColorFilter(grayColorFilter);
         Smoke.setColorFilter(grayColorFilter);
         alarm.setColorFilter(grayColorFilter);
 
@@ -593,36 +665,50 @@ public class MainActivity extends Activity {
         leftButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                return ButtonTouchUtil(view, motionEvent, PTZCommand.PAN_LEFT, PTZCommand.PAN_RIGHT);
+                ptztimeout=5;
+                return ptzControl.ptzControlLeft(motionEvent,mLoginModule.getLoginHandle(),0,(byte)0,(byte)2);
+//                return ButtonTouchUtil(view, motionEvent, PTZCommand.PAN_LEFT, PTZCommand.PAN_RIGHT);
             }
         });
         rightButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                return ButtonTouchUtil(view, motionEvent, PTZCommand.PAN_RIGHT, PTZCommand.PAN_LEFT);
+                ptztimeout=5;
+                return ptzControl.ptzControlRight(motionEvent,mLoginModule.getLoginHandle(),0,(byte)0,(byte)2);
+//                return ButtonTouchUtil(view, motionEvent, PTZCommand.PAN_RIGHT, PTZCommand.PAN_LEFT);
             }
         });
 
         upButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                return ButtonTouchUtil(view, motionEvent, PTZCommand.TILT_UP, PTZCommand.TILT_DOWN);
+                ptztimeout=5;
+                return ptzControl.ptzControlUp(motionEvent,mLoginModule.getLoginHandle(),0,(byte)0,(byte)2);
+//                return ButtonTouchUtil(view, motionEvent, PTZCommand.TILT_UP, PTZCommand.TILT_DOWN);
             }
         });
         downButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                return ButtonTouchUtil(view, motionEvent, PTZCommand.TILT_DOWN, PTZCommand.TILT_UP);
+                ptztimeout=5;
+                return ptzControl.ptzControlDown(motionEvent,mLoginModule.getLoginHandle(),0,(byte)0,(byte)2);
+//                return ButtonTouchUtil(view, motionEvent, PTZCommand.TILT_DOWN, PTZCommand.TILT_UP);
             }
         });
         //显示面板设置手势检测器
         SurfaceTouchUtil();
         PTZTimerStart();
+        WifiInit("TP-LINK_21EC","12345678");
+        vid[0] = new Videoinfo("192.168.2.64", 8000, "admin", "iris2021");
+        login[0] = new HIKILogin();
+        vid[1] = new Videoinfo("192.168.2.66", 8000, "admin", "iris2021");
+        login[1] = new HIKILogin();
+        mLoginModule = new IPLoginModule();
+        mLiveModule = new LivePreviewModule(mLoginModule);
+        ptzControl = new PTZControl();
         initThread=new Thread()
         {
             public void run() {
-//                HiKiInit(0);//摄像头初始化
-//                HiKiInit(1);
                 HardInit();
                 logicth= new Thread(new LogicMain(),"Thread_logic");
                 logicth.start();
@@ -630,28 +716,68 @@ public class MainActivity extends Activity {
         };
         initThread.start();
     }
+
+    @Override
+    protected void onDestroy() {
+        // while exiting the application, please make sure to invoke cleanup.
+        // 退出应用后，调用 cleanup 清理资源
+        NetSDKLib.getInstance().cleanup();
+        super.onDestroy();
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        mLiveModule.initSurfaceView(surface3);
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        mLiveModule.stopRealPlay();
+    }
+
     //手势处理监听器
     private class HiGestuewDetector extends GestureDetector.SimpleOnGestureListener {
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             //移动速度大于1000时判定为滑动
-            if (velocityX < -1000 && isSurface1) {
-                surface2.setVisibility(View.VISIBLE);
-            } else if (velocityX > 1000 && isSurface2) {
-                surface1.setVisibility(View.VISIBLE);
+            if (velocityX < -1000 || velocityX > 1000) {
+                if(showSurface){
+                    showSurface = false;
+                    surface1.setVisibility(View.GONE);
+                    surface2.setVisibility(View.GONE);
+                    surface3.setVisibility(View.VISIBLE);
+                    surface4.setVisibility(View.VISIBLE);
+                    if(IPLoginModule.loginStatus==true)
+                    {
+                        mLiveModule.startPlay(0,1,surface3);
+                    }
+                }
+                else{
+                    showSurface = true;
+                    surface1.setVisibility(View.VISIBLE);
+                    surface2.setVisibility(View.VISIBLE);
+                    surface3.setVisibility(View.GONE);
+                    surface4.setVisibility(View.GONE);
+                    ptzvis.setVisibility(View.GONE);
+                }
             }
             return super.onFling(e1, e2, velocityX, velocityY);
         }
 
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            //实现surfaceview的单独显示
-            if (isSurface1) {
-                surface2.setVisibility(View.GONE);
-            } else if (isSurface2) {
-                surface1.setVisibility(View.GONE);
-            }
-            return super.onDoubleTap(e);
-        }
+//        @Override
+//        public boolean onDoubleTap(MotionEvent e) {
+//            //实现surfaceview的单独显示
+//            if (isSurface1) {
+//                surface2.setVisibility(View.GONE);
+//            } else if (isSurface2) {
+//                surface1.setVisibility(View.GONE);
+//            }
+//            return super.onDoubleTap(e);
+//        }
     }
 }

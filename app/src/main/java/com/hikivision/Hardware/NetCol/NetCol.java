@@ -50,12 +50,16 @@ public class NetCol implements Runnable{
             Byte b;
             while (true){
                 b=bin.readByte();
-                if(b==0x0d)break;
+                if(b==0x0d)
+                {
+                    b=bin.readByte();
+                    if(b!=0x0a){
+                        output.add((byte) 0x0d);
+                        output.add(b);
+                    }
+                    else break;
+                }
                 else output.add(b);
-            }
-            if(bin.readByte()!=0x0a){
-                Log.d(TAG,"error");
-                return null;
             }
             Iterator<Byte> iterator = output.iterator();
             int i=0;
@@ -100,7 +104,7 @@ public class NetCol implements Runnable{
 //            disconnect();
 //            clintsocket=new Socket(severip,port);
             clintsocket = new Socket();
-            clintsocket.connect(socketAddress, 1500);
+            clintsocket.connect(socketAddress, 3000);
             clintsocket.setReceiveBufferSize(4096);
             clintsocket.setSoLinger(true, 30);
             clintsocket.setTcpNoDelay(true);

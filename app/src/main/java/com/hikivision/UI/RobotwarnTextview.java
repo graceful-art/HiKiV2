@@ -67,6 +67,14 @@ public class RobotwarnTextview extends AppCompatTextView {
                 if(robotwarn[4].times>0)return true;
                 else return  false;
         }
+        public static boolean haveDistanceWarn() {
+                if(robotwarn[2].times>0) return true;
+                else return false;
+        }
+        public static boolean haveAttitudeWarn() {
+                if(robotwarn[1].times>0) return true;
+                else return false;
+        }
         public static Map<Byte,RobotWarn> RobotWarnMap=new HashMap<Byte,RobotWarn>();
         public static void reFresh(byte info)
         {

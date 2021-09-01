@@ -93,7 +93,7 @@ import java.util.Map;
     public byte[] spotPacket;
     //在UI中需要更新使用到的一些变量
     public int speed;
-    public int gas_thinkness;
+    public int gas_concentration;
     public int location;
 
 
@@ -102,9 +102,9 @@ import java.util.Map;
     {
         if(spotPacket!=null)
         {
-            speed=(int)spotPacket[7];
-            location=(int)(spotPacket[5])*256+(int)spotPacket[6];
-            gas_thinkness=(int)(spotPacket[3])*256+(int)spotPacket[4];
+            speed=(int)(spotPacket[7]<0 ? spotPacket[7]+256 : spotPacket[7]);
+            location=(short)((spotPacket[5]&0xFF)<<8 | (spotPacket[6]&0xFF));
+            gas_concentration=(short)((spotPacket[3]&0xFF)<<8 | (spotPacket[4]&0xFF));
         }
     }
     //通过接受的数据包更新现场状态信息
@@ -177,9 +177,9 @@ public class InfoPacketReceive {
     }
 
     public byte[] getSpotPacket() { return spotsituation.spotPacket; }
-    public float    getSpeed(){return (float) spotsituation.speed/100;}
-    public int    getLocation(){return spotsituation.location/100;}
-    public int    getGas_thinkness(){return spotsituation.gas_thinkness;}
+    public float getSpeed(){return spotsituation.speed==255 ? 0 : (float) (spotsituation.speed*8*314*50/27/10000)/100;}
+    public int getLocation(){return spotsituation.location/100;}
+    public int getGas_concentration(){return spotsituation.gas_concentration==-1 ? 0 : spotsituation.gas_concentration;}
 
 
     public InfoPacketReceive() {}
@@ -200,19 +200,19 @@ public class InfoPacketReceive {
 
         //找到相应的命令
         if(info_receive_kind!=null){
-            Log.d(TAG,Integer.toHexString((int)fromtcp[2]));
+//            Log.d(TAG,Integer.toHexString((int)fromtcp[2]));
             Log.d(TAG,info_receive_kind.name());
             switch (info_receive_kind){
                 case GET_LEFT_SPEED:
-                    robot_status=ROBOT_STATUS.LEFT_MOVING;
+//                    robot_status=ROBOT_STATUS.LEFT_MOVING;
                     robot_pwm_speed=(int)fromtcp[3];
                     break;
                 case GET_RIGHT_SPEED:
-                    robot_status=ROBOT_STATUS.RIGHT_MOVING;
+//                    robot_status=ROBOT_STATUS.RIGHT_MOVING;
                     robot_pwm_speed=(int)fromtcp[3];
                     break;
                 case GET_STOP_BRAKE:
-                    robot_status=ROBOT_STATUS.STOP_BRAKE;
+//                    robot_status=ROBOT_STATUS.STOP_BRAKE;
                     robot_pwm_speed=0;
                     break;
                 case GET_BAND_BRAKE:
@@ -229,6 +229,11 @@ public class InfoPacketReceive {
                     for (int i=0;i<spotdata.length;i++)
                         spotdata[i]=fromtcp[i+3];
                     spotsituation.reFresh(spotdata);
+                    if(spotdata[8]!=0xFF) {
+                        if ((spotdata[8] & 0x01) > 0) robot_status = ROBOT_STATUS.STOP_BRAKE;
+                        else if ((spotdata[8] & 0x04) > 0) robot_status = ROBOT_STATUS.LEFT_MOVING;
+                        else robot_status = ROBOT_STATUS.RIGHT_MOVING;
+                    }
                     FlowTimeReset();//重置输入流状态
                     break;
                 case ANSWER_GESTURE:

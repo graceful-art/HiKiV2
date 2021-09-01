@@ -22,7 +22,7 @@ public class RobotProgressBar extends View {
     private final String TAG = "RobotProgressBar";
     private int mProgress_outline_color = 0xFFFFFFFF;//外边框颜色
     private int mProgress_color = 0xFFFFFFFF; //进度条颜色
-    private int mProgress_circle_color = 0xFF00FF00;  //圆圈颜色
+    private int mProgress_circle_color = 0xFFFF0000;  //圆圈颜色
     private int mProgress_text_color = 0xFFFFFFFF;  //进度字体颜色
     private int mProgress_text_bg_color = 0x50FFFFFF;  //进度背景颜色
     private float mProgress_circle_height = 56;// 56;  //圆圈高度
@@ -32,7 +32,7 @@ public class RobotProgressBar extends View {
     private float mProgress_text_paddingH = 25;  //进度文字左右padding
     private float mProgress_text_paddingV = 0;  //进度文字上下pading
     private float mProgress_text_size = 32;  //进度文字字体大小
-    private float mMaxProgress = 50;
+    private float mMaxProgress = 30;
     private volatile  float mProgress_progress_bar = 0;
     private int mProgressWidth;
 
@@ -199,4 +199,6 @@ public class RobotProgressBar extends View {
     public void setmMaxProgress(int maxProgress) {
         this.mMaxProgress = maxProgress;
     }
+
+    public int getmMaxProgress() { return (int)mMaxProgress;}
 }

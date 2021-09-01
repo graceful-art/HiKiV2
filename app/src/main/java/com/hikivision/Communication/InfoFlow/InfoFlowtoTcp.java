@@ -49,7 +49,7 @@ public class InfoFlowtoTcp implements Runnable{
                         e.printStackTrace();
                     }
                 }
-            }, 1000, 200);//1秒以后启动，每200ms发生一次
+            }, 1000, 500);//1秒以后启动，每500ms发生一次
         }
     }
     public void sendPacket(InfoPacketSend packetSend){
@@ -63,9 +63,9 @@ public class InfoFlowtoTcp implements Runnable{
         {
             try {
                 byte[] data = netCol.read();
-                if (data != null) {
+                if (data != null && data.length >= 4) {
                     infoPacketReceive.reFresh(data);
-                    Log.d(TAG, infoPacketReceive.robot_status.name());
+//                    Log.d(TAG, infoPacketReceive.robot_status.name());
                 }
             }
             catch (EOFException e)

@@ -68,7 +68,7 @@ public class InfoMcuSend {
     }
 
     //控制面板
-    private Map<LED_KIND, LED_STATUS> ConPan=new HashMap<LED_KIND, LED_STATUS>(){{
+    public static Map<LED_KIND, LED_STATUS> ConPan=new HashMap<LED_KIND, LED_STATUS>(){{
         put(LED_KIND.RED_LED,   LED_STATUS.OFF);
         put(LED_KIND.GREEN_LED, LED_STATUS.OFF);
         put(LED_KIND.YELLO_LED, LED_STATUS.OFF);

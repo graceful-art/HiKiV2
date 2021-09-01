@@ -27,9 +27,9 @@ public class InfoFlowtoMcu implements Runnable {
         while(true)
         {
             byte[] data = serialCol.read();
-            if(data!=null) {
+            if(data != null && data.length >= 4) {
                 infomcureceive.reFresh(data);
-                Log.d(TAG,"MCU RECEIVE DATA");
+//                Log.d(TAG,"MCU RECEIVE DATA");
             }
         }
     }
