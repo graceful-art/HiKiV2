@@ -44,6 +44,8 @@ import com.hikivision.Hardware.NetCol.NetCol;
 import com.hikivision.Hardware.NetCol.Wifi;
 import com.hikivision.R;
 import com.hikivision.Hardware.Serial.SerialCol;
+import com.hikivision.ThermalImaging.TICameraModule;
+import com.hikivision.ThermalImaging.TISurfaceView;
 import com.hikvision.netsdk.HCNetSDK;
 import com.hikvision.netsdk.PTZCommand;
 
@@ -89,7 +91,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
     private PlaySurfaceview    surface1   = null;
     private PlaySurfaceview    surface2   = null;
     private SurfaceView        surface3   = null;
-    private PlaySurfaceview    surface4   = null;
+    private TISurfaceView      surface4   = null;
     private TextView           gas        = null;
     private TextView           speed      = null;
     private TextView           status     = null;
@@ -161,6 +163,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
     private LivePreviewModule mLiveModule;
     private PTZControl ptzControl;
     public static TalkModule mTalkModule;
+    /**
+     * 热成像摄像头
+     */
+    private TICameraModule mTICameraModule;
     /**
      * 在线程中进行,UI显示
      * */
@@ -317,7 +323,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                         Thread Hiki = new Thread() {
                             public void run() {
                                 HiKiInit(1);
-                                HiKiInit(3);
                             }
                         };
                         Hiki.start();
@@ -326,11 +331,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                         Thread Hiki = new Thread() {
                             public void run() {
                                 HiKiInit(2);
-                                try { Thread.sleep(300);
+                                try { Thread.sleep(500);
                                 }catch (InterruptedException e){e.printStackTrace();}
                             }
                         };
                         Hiki.start();
+                    }
+                    if(mTICameraModule.connectState == false) {
+                        HiKiInit(3);
                     }
                 }
             }
@@ -388,9 +396,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
             mTalkModule = new TalkModule(mLoginModule);
         }
         else if(index==3){
-//            login[1].CameraLogin(vid[1]);
-            surface4.startPreview(login[1].getLoginID(), login[1].getStartChannel() + 1);
-            surface4.login = login[1];
+            mTICameraModule.startTICamera(surface4);
         }
     }
     /**
@@ -626,7 +632,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
         surface2         =(PlaySurfaceview)  findViewById(R.id.surface2);
         surface3         =(SurfaceView)      findViewById(R.id.surface3);
         surface3.getHolder().addCallback(this);
-        surface4         =(PlaySurfaceview)  findViewById(R.id.surface4);
+        surface4         =(TISurfaceView)    findViewById(R.id.surface4);
         gas              =(TextView)         findViewById(R.id.Gas);
         speed            =(TextView)         findViewById(R.id.speed);
         status           =(TextView)         findViewById(R.id.status);
@@ -706,6 +712,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
         mLoginModule = new IPLoginModule();
         mLiveModule = new LivePreviewModule(mLoginModule);
         ptzControl = new PTZControl();
+        mTICameraModule = new TICameraModule();
         initThread=new Thread()
         {
             public void run() {
@@ -715,14 +722,32 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
             }
         };
         initThread.start();
+        Log.v(TAG, "onCreate");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.v(TAG, "onPause");
+    }
+
+    @Override
+    protected void onStop() {
+        mTICameraModule.stopTICamera();
+        super.onStop();
+        Log.v(TAG, "onStop");
     }
 
     @Override
     protected void onDestroy() {
         // while exiting the application, please make sure to invoke cleanup.
         // 退出应用后，调用 cleanup 清理资源
+        Log.v(TAG, "onDestroy");
+        mTICameraModule.stopTICamera();
         NetSDKLib.getInstance().cleanup();
         super.onDestroy();
+//        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
     }
 
     @Override
