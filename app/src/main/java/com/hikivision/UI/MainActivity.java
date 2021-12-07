@@ -191,7 +191,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                         dir.setRotation(0);
                     }
                     //更新电池电量
-                    batteryView.setPower(infoFlowtoMcu.infomcureceive.batteryvalue/2);
+                    batteryView.setPower(infoFlowtoMcu.infomcureceive.batteryvalue);
                     /**
                      * 更新当前状态
                      * */
@@ -331,7 +331,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                         Thread Hiki = new Thread() {
                             public void run() {
                                 HiKiInit(2);
-                                try { Thread.sleep(500);
+                                try { Thread.sleep(5000);
                                 }catch (InterruptedException e){e.printStackTrace();}
                             }
                         };

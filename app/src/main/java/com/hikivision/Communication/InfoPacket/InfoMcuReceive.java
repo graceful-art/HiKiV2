@@ -103,7 +103,11 @@ public class InfoMcuReceive {
             Log.d(TAG, info_receive_kind.name());
             switch (info_receive_kind) {
                 case ANSWER_QUERY_KEY:
-                    batteryvalue=frommcu[3];
+                    if(frommcu[3]>=79) batteryvalue=100;
+                    else if(frommcu[3]>=76) batteryvalue=80;
+                    else if(frommcu[3]>=72) batteryvalue=50;
+                    else if(frommcu[3]>=69) batteryvalue=20;
+                    else batteryvalue=0;
                     if(((frommcu[5]>>2)&0x03)==0x02) speed=Hight_Speed;
                     else if(((frommcu[5]>>2)&0x03)==0x01) speed=Medium_Speed;
                     else if(((frommcu[5]>>2)&0x03)==0x00) speed=Low_Speed;
